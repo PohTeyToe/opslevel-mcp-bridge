@@ -20,9 +20,10 @@ type HistoryItem = { role: "user" | "assistant"; content: string };
 
 export async function POST(req: Request) {
   const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) {
+  const oauthToken = process.env.ANTHROPIC_AUTH_TOKEN;
+  if (!apiKey && !oauthToken) {
     return NextResponse.json(
-      { error: "ANTHROPIC_API_KEY is not set on the server. Set it in Vercel env and redeploy." },
+      { error: "ANTHROPIC_API_KEY (or ANTHROPIC_AUTH_TOKEN) is not set on the server. Set it in Vercel env and redeploy." },
       { status: 500 }
     );
   }
@@ -30,7 +31,9 @@ export async function POST(req: Request) {
   const body = (await req.json()) as { history: HistoryItem[] };
   const history = body.history ?? [];
 
-  const client = new Anthropic({ apiKey });
+  const client = apiKey
+    ? new Anthropic({ apiKey })
+    : new Anthropic({ authToken: oauthToken! });
 
   const messages: Anthropic.MessageParam[] = history.map((h) => ({
     role: h.role,
